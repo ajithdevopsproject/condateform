@@ -4,15 +4,18 @@ pipeline {
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub') // optional
     }
-    stages {
-        stage('Test') {
-            steps {
-                echo 'Jenkinsfile is working!'
-            }
-        }
+
+    triggers {
+        githubPush() // Optional: triggers on push from GitHub webhook
     }
 
     stages {
+        stage('Test') {
+            steps {
+                echo '✅ Jenkinsfile is working!'
+            }
+        }
+
         stage('Checkout') {
             steps {
                 git branch: 'main', url: 'https://github.com/ajithdevopsproject/condateform.git'
