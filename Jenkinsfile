@@ -4,6 +4,13 @@ pipeline {
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub') // optional
     }
+    stages {
+        stage('Test') {
+            steps {
+                echo 'Jenkinsfile is working!'
+            }
+        }
+    }
 
     stages {
         stage('Checkout') {
