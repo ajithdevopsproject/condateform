@@ -2,77 +2,69 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub') // Add this credential in Jenkins
         BACKEND_IMAGE = 'ajithdocgym/contactform-backend:latest'
         FRONTEND_IMAGE = 'ajithdocgym/contactform-frontend:latest'
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub') // Make sure this ID matches Jenkins credentials
     }
 
     triggers {
-        githubPush() // Trigger build on GitHub push
+        githubPush()
     }
 
     stages {
-        stage('Test') {
-            steps {
-                echo '✅ Jenkinsfile is working!'
-            }
-        }
-
         stage('Checkout') {
             steps {
+                echo "📦 Cloning GitHub repository"
                 git branch: 'main', url: 'https://github.com/ajithdevopsproject/condateform.git'
             }
         }
 
         stage('Clean Docker') {
             steps {
-                script {
-                    echo "Stopping and removing old containers..."
-                    sh 'docker-compose down --remove-orphans || true'
-
-                    echo "Pruning unused Docker images..."
-                    sh 'docker image prune -af || true'
-                }
+                echo "🧹 Cleaning Docker"
+                sh 'docker-compose down --remove-orphans || true'
+                sh 'docker image prune -af || true'
             }
         }
 
-        stage('Build Backend') {
+        stage('Build Backend Image') {
             steps {
-                script {
-                    docker.build('contactform-backend:latest', './backend')
-                    sh "docker tag contactform-backend:latest $BACKEND_IMAGE"
-                }
-            }
-        }
-
-        stage('Build Frontend') {
-            steps {
-                script {
-                    docker.build('contactform-frontend:latest', './frontend')
-                    sh "docker tag contactform-frontend:latest $FRONTEND_IMAGE"
-                }
-            }
-        }
-
-        stage('Docker Hub Login') {
-            steps {
-                echo "🔐 Logging into Docker Hub"
+                echo "🐳 Building Backend Docker Image"
                 sh """
-                    echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
+                    docker build -t contactform-backend:latest ./backend
+                    docker tag contactform-backend:latest $BACKEND_IMAGE
                 """
             }
         }
 
-        stage('Push Images to Docker Hub') {
+        stage('Build Frontend Image') {
             steps {
-                echo "🚀 Pushing images to Docker Hub"
+                echo "🐳 Building Frontend Docker Image"
+                sh """
+                    docker build -t contactform-frontend:latest ./frontend
+                    docker tag contactform-frontend:latest $FRONTEND_IMAGE
+                """
+            }
+        }
+
+        stage('DockerHub Login') {
+            steps {
+                echo "🔐 Logging into DockerHub"
+                sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+            }
+        }
+
+        stage('Push Images to DockerHub') {
+            steps {
+                echo "🚀 Pushing Images to DockerHub"
                 sh "docker push $BACKEND_IMAGE"
                 sh "docker push $FRONTEND_IMAGE"
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy with Docker Compose') {
             steps {
+                echo "🚢 Deploying Application Stack"
                 sh 'docker-compose up -d --build'
             }
         }
@@ -80,10 +72,10 @@ pipeline {
 
     post {
         success {
-            echo '✅ Pipeline completed successfully!'
+            echo '✅ Deployment pipeline completed successfully!'
         }
         failure {
-            echo '❌ Pipeline failed.'
+            echo '❌ Deployment pipeline failed!'
         }
     }
 }
