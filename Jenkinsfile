@@ -4,7 +4,7 @@ pipeline {
     environment {
         BACKEND_IMAGE = 'ajithdocgym/contactform-backend:latest'
         FRONTEND_IMAGE = 'ajithdocgym/contactform-frontend:latest'
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub') // You must create this in Jenkins > Credentials
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub')
     }
 
     triggers {
@@ -21,8 +21,8 @@ pipeline {
 
         stage('Clean Docker Environment') {
             steps {
-                echo "🧹 Cleaning previous Docker setup..."
-                sh 'docker compose down --remove-orphans || true'
+                echo "🧹 Cleaning old containers..."
+                sh 'docker-compose down --remove-orphans || true'
                 sh 'docker image prune -af || true'
             }
         }
@@ -64,8 +64,8 @@ pipeline {
 
         stage('Deploy App') {
             steps {
-                echo "🚀 Deploying application using Docker Compose..."
-                sh 'docker compose up -d --build'
+                echo "🚀 Deploying app with docker-compose..."
+                sh 'docker-compose up -d --build'
             }
         }
     }
@@ -75,7 +75,7 @@ pipeline {
             echo '✅ Deployment pipeline completed successfully!'
         }
         failure {
-            echo '❌ Deployment pipeline failed. Check logs.'
+            echo '❌ Deployment failed. Please check the logs.'
         }
     }
 }
