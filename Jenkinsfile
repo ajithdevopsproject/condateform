@@ -2,11 +2,13 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub') // optional
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub') // Add this credential in Jenkins
+        BACKEND_IMAGE = 'ajithdocgym/contactform-backend:latest'
+        FRONTEND_IMAGE = 'ajithdocgym/contactform-frontend:latest'
     }
 
     triggers {
-        githubPush() // Optional: triggers on push from GitHub webhook
+        githubPush() // Trigger build on GitHub push
     }
 
     stages {
@@ -38,6 +40,7 @@ pipeline {
             steps {
                 script {
                     docker.build('contactform-backend:latest', './backend')
+                    sh "docker tag contactform-backend:latest $BACKEND_IMAGE"
                 }
             }
         }
@@ -46,7 +49,25 @@ pipeline {
             steps {
                 script {
                     docker.build('contactform-frontend:latest', './frontend')
+                    sh "docker tag contactform-frontend:latest $FRONTEND_IMAGE"
                 }
+            }
+        }
+
+        stage('Docker Hub Login') {
+            steps {
+                echo "🔐 Logging into Docker Hub"
+                sh """
+                    echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
+                """
+            }
+        }
+
+        stage('Push Images to Docker Hub') {
+            steps {
+                echo "🚀 Pushing images to Docker Hub"
+                sh "docker push $BACKEND_IMAGE"
+                sh "docker push $FRONTEND_IMAGE"
             }
         }
 
@@ -54,6 +75,15 @@ pipeline {
             steps {
                 sh 'docker-compose up -d --build'
             }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Pipeline completed successfully!'
+        }
+        failure {
+            echo '❌ Pipeline failed.'
         }
     }
 }
