@@ -4,7 +4,7 @@ pipeline {
     environment {
         BACKEND_IMAGE = 'ajithdocgym/contactform-backend:latest'
         FRONTEND_IMAGE = 'ajithdocgym/contactform-frontend:latest'
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub')
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub') // You must create this in Jenkins > Credentials
     }
 
     triggers {
@@ -14,19 +14,14 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
+                echo "📥 Cloning source code..."
                 git branch: 'main', url: 'https://github.com/ajithdevopsproject/condateform.git'
             }
         }
 
-        stage('Check Docker Compose') {
+        stage('Clean Docker Environment') {
             steps {
-                sh 'which docker'
-                sh 'docker compose version'
-            }
-        }
-
-        stage('Clean Docker') {
-            steps {
+                echo "🧹 Cleaning previous Docker setup..."
                 sh 'docker compose down --remove-orphans || true'
                 sh 'docker image prune -af || true'
             }
@@ -34,6 +29,7 @@ pipeline {
 
         stage('Build Backend Image') {
             steps {
+                echo "🔧 Building backend image..."
                 sh '''
                     docker build -t contactform-backend:latest ./backend
                     docker tag contactform-backend:latest $BACKEND_IMAGE
@@ -43,6 +39,7 @@ pipeline {
 
         stage('Build Frontend Image') {
             steps {
+                echo "🔧 Building frontend image..."
                 sh '''
                     docker build -t contactform-frontend:latest ./frontend
                     docker tag contactform-frontend:latest $FRONTEND_IMAGE
@@ -50,21 +47,24 @@ pipeline {
             }
         }
 
-        stage('DockerHub Login') {
+        stage('Login to DockerHub') {
             steps {
+                echo "🔐 Logging into DockerHub..."
                 sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
             }
         }
 
         stage('Push Images to DockerHub') {
             steps {
-                sh 'docker push $BACKEND_IMAGE'
-                sh 'docker push $FRONTEND_IMAGE'
+                echo "📤 Pushing images..."
+                sh "docker push $BACKEND_IMAGE"
+                sh "docker push $FRONTEND_IMAGE"
             }
         }
 
-        stage('Deploy with Docker Compose') {
+        stage('Deploy App') {
             steps {
+                echo "🚀 Deploying application using Docker Compose..."
                 sh 'docker compose up -d --build'
             }
         }
@@ -75,7 +75,7 @@ pipeline {
             echo '✅ Deployment pipeline completed successfully!'
         }
         failure {
-            echo '❌ Deployment pipeline failed!'
+            echo '❌ Deployment pipeline failed. Check logs.'
         }
     }
 }
